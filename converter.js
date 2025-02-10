@@ -3,10 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const ExcelJS = require('exceljs');
-const { log } = require('console');
+
 
 // Путь к Excel-файлу
-const excelFilePath = '/Users/marinasemenova/Downloads/test.xlsx';
+const excelFilePath = '/Users/marinasemenova/Downloads/прайсы.xlsx';
 
 // Папка для сохранения изображений
 const imagesFolder = './products_images';
@@ -17,10 +17,20 @@ if (!fs.existsSync(imagesFolder)) {
 }
 
 // Читаем Excel с помощью xlsx (для работы с таблицей)
+// const workbookXlsx = xlsx.readFile(excelFilePath);
+// const sheetName = workbookXlsx.SheetNames[0];
+// const sheet = workbookXlsx.Sheets[sheetName];
+// const data = xlsx.utils.sheet_to_json(sheet);
+let data = []
 const workbookXlsx = xlsx.readFile(excelFilePath);
-const sheetName = workbookXlsx.SheetNames[0];
-const sheet = workbookXlsx.Sheets[sheetName];
-const data = xlsx.utils.sheet_to_json(sheet);
+
+workbookXlsx.SheetNames.forEach(sheetName => {
+    const sheet = workbookXlsx.Sheets[sheetName];
+    const sheetData = xlsx.utils.sheet_to_json(sheet); // Получаем данные с листа
+    data.push(...sheetData); // Добавляем в общий массив
+    // console.log(`Данные с листа "${sheetName}":`, data);
+});
+
 
 console.log('первоначальная дата',data);
 
@@ -117,16 +127,6 @@ fs.writeFile('products.json', JSON.stringify(products, null, 2), (err) => {
     }
 });
 
-// Функция для загрузки изображения по ссылке
-async function downloadImage(url, imagePath) {
-    try {
-        const response = await axios.get(url, { responseType: 'stream' });
-        response.data.pipe(fs.createWriteStream(imagePath));
-        console.log(`Изображение сохранено: ${imagePath}`);
-    } catch (error) {
-        console.error(`Ошибка при загрузке изображения: ${url}`, error.message);
-    }
-}
 
 // Функция для сохранения встроенного изображения
 function saveImage(buffer, imageName) {
@@ -135,8 +135,8 @@ function saveImage(buffer, imageName) {
     console.log(`Изображение сохранено: ${imagePath}`);
 }
 
-// Функция для обработки встроенных изображений
-async function extractEmbeddedImages() {
+// Функция для обработки встроенных изображений для одной страницыы
+async function extractEmbeddedImagesForOnePage() {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(excelFilePath);
     const worksheet = workbook.worksheets[0];
@@ -162,22 +162,35 @@ async function extractEmbeddedImages() {
 
     console.log('Извлечение встроенных изображений завершено.');
 }
+// Функция для обработки встроенных изображений для всех страниц с книги
+async function extractEmbeddedImages() {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(excelFilePath);
 
-// Обработка каждой строки (загрузка изображений по ссылке)
-// data.forEach((row) => {
-//     const id = row['с']; // ID из столбца "с"
-//     const imageUrl = row['Изображение']; // URL изображения из столбца "Изображение"
+    workbook.worksheets.forEach((worksheet, sheetIndex) => {
+        worksheet.getImages().forEach((img, imgIndex) => {
+            const rowNumber = img.range.tl.nativeRow + 1; // Excel считает с 1
+            console.log(`Лист: ${worksheet.name}, строка: ${rowNumber}`);
 
-//     if (imageUrl) {
-//         const imageName = `${id}.jpg`; // Имя файла будет равно ID
-//         const imagePath = path.join(imagesFolder, imageName);
+            const row = worksheet.getRow(rowNumber);
+            const id = row.getCell(1).text.trim(); // ID из первой колонки (столбец A)
 
-//         // Загружаем и сохраняем изображение
-//         downloadImage(imageUrl, imagePath);
-//     }
-// });
+            if (id && img.imageId) {
+                const image = workbook.model.media.find(m => m.index === img.imageId);
+                if (image) {
+                    // Сохраняем изображение с учетом названия листа
+                    saveImage(image.buffer, `${id}.jpg`);
+                }
+            }
+        });
+    });
+
+    console.log('Извлечение встроенных изображений завершено.');
+}
+
 
 // Запускаем извлечение встроенных изображений
 extractEmbeddedImages().catch(console.error);
+// extractEmbeddedImagesForOnePage().catch(console.error)
 
 console.log('Обработка завершена.');
