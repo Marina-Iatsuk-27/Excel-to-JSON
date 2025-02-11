@@ -27,8 +27,9 @@ const workbookXlsx = xlsx.readFile(excelFilePath);
 workbookXlsx.SheetNames.forEach(sheetName => {
     const sheet = workbookXlsx.Sheets[sheetName];
     const sheetData = xlsx.utils.sheet_to_json(sheet); // Получаем данные с листа
+
     data.push(...sheetData); // Добавляем в общий массив
-    // console.log(`Данные с листа "${sheetName}":`, data);
+    //  console.log(`Данные с листа "${sheetName}":`, data);
 });
 
 
@@ -37,6 +38,7 @@ console.log('первоначальная дата',data);
 //словарь
 const keysMapping = {
     '1d': 'id',
+    '1D': 'id',
     'ррц': 'price',
     'Model': 'model',
     'описание': 'description',
@@ -46,10 +48,30 @@ const keysMapping = {
     'объектив': 'lens',
     'захватлиц': 'face_capture',
     'аудиоиo': 'audio_io',
+    'аудио i/o': 'audio_io',
     'тревожныйio': 'alarm_io',
+    'тревожный i/o': 'alarm_io',
     'статус': 'status',
-    'ик': 'IR_range'
+    'ик': 'IR_range',
+    'ИК': 'IR_range',
+    'wdr': 'WDR',
+    'WDR': 'WDR',
+    'sd': 'SD',
+    'SD': 'SD',
+    'reset': 'reset',
+    'Reset': 'reset',
+    'poe': 'PoE_802.3af',
+    'PoE': 'PoE_802.3af',
+    'poe 802.3af': 'PoE_802.3af',
+    'dc': 'DC',
+    'DC': 'DC',
+    'zoom': 'zoom',
+    'линейка': 'line',
+    'серия': 'series',
+    'модель': 'model',
+    'изображение': 'image'
 };
+
 // Функция нормализации ключа: приводит к нижнему регистру, убирает пробелы и знаки препинания
 function normalizeKey(key) {
     return key.toLowerCase().replace(/\s+/g, '').replace(/[^a-zа-я0-9]/gi, '');
@@ -116,7 +138,7 @@ const products = data.map(item => {
     return newItem;
 });
 
-console.log('Преобразованные продукты в массиве:', products);
+// console.log('Преобразованные продукты в массиве:', products);
 
 //сохраняем в файл:
 fs.writeFile('products.json', JSON.stringify(products, null, 2), (err) => {
@@ -190,7 +212,9 @@ async function extractEmbeddedImages() {
 
 
 // Запускаем извлечение встроенных изображений
-extractEmbeddedImages().catch(console.error);
+ extractEmbeddedImages().catch(console.error);
+
+
 // extractEmbeddedImagesForOnePage().catch(console.error)
 
 console.log('Обработка завершена.');
